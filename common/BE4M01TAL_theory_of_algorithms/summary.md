@@ -13,7 +13,7 @@
 
 1. [Asymptotický růst, časová a paměťová složitost, správnost algoritmů](#1-asymptotický-růst-funkcí-časová-a-paměťová-složitost-správnost-algoritmů)
 2. [Turingovy stroje — deterministické, vícepáskové, nedeterministické](#2-turingovy-stroje)
-3. [Rozhodovací úlohy a jazyky. Třídy P, NP, co-NP. Redukce, NPC, Cookova věta. Heuristiky a aproximace](#3-rozhodovací-úlohy-a-jazyky-třídy-p-np-co-np-redukce-npc-cookova-věta-heuristiky)
+3. [Rozhodovací úlohy a jazyky. Třídy P, NP, co-NP. Redukce, NPC, Cookova věta. Heuristiky a aproximace](#3-rozhodovací-úlohy-a-jazyky-třídy-p-np-co-np-redukce-npc-cookova-věta-heuristiky-a-aproximace)
 4. [Třídy paměťové složitosti PSPACE a NPSPACE. Savitchova věta](#4-třídy-paměťové-složitosti-pspace-a-npspace-savitchova-věta)
 5. [Pravděpodobnostní algoritmy. Randomizované Turingovy stroje. Třídy RP, ZPP, co-RP](#5-pravděpodobnostní-algoritmy-randomizované-tm-třídy-rp-zpp-co-rp)
 6. [Rozhodnutelnost a nerozhodnutelnost. Rekursivní a rekursivně spočetné jazyky. Diagonální jazyk. Univerzální jazyk a univerzální TM](#6-rozhodnutelnost-a-nerozhodnutelnost-rekursivní-a-rekursivně-spočetné-jazyky)
@@ -260,7 +260,7 @@ Buňka adresy 0 = pracovní registr, adresa 1 = indexový registr. Instrukce: `L
 
 ---
 
-## 3. Rozhodovací úlohy a jazyky. Třídy P, NP, co-NP. Redukce, NPC, Cookova věta. Heuristiky ⭐⭐⭐
+## 3. Rozhodovací úlohy a jazyky. Třídy P, NP, co-NP. Redukce, NPC, Cookova věta. Heuristiky a aproximace
 
 > **Pozn.:** Toto je **nejčastěji zkoušený okruh státnice** — v archivu OI-Wiki tvoří přes 30 % všech TAL otázek. Klíčové jsou definice tříd, polynomiální redukce, Cookova věta a alespoň jedna konkrétní NPC redukce (např. 3-SAT → 3-barevnost nebo 3-SAT → klika).
 
@@ -706,7 +706,7 @@ Doplňky NP-úloh ležící v NP automaticky neumíme dokázat.
 
 ---
 
-## 4. Třídy paměťové složitosti PSPACE a NPSPACE. Savitchova věta ⭐
+## 4. Třídy paměťové složitosti PSPACE a NPSPACE. Savitchova věta
 
 ### 4.1 Definice (*doh §4.6*)
 
@@ -844,7 +844,7 @@ V kontextu kryptografie: po 100 iteracích Miller-Rabina je pravděpodobnost chy
 
 ---
 
-## 6. Rozhodnutelnost a nerozhodnutelnost. Rekursivní a rekursivně spočetné jazyky ⭐⭐
+## 6. Rozhodnutelnost a nerozhodnutelnost. Rekursivní a rekursivně spočetné jazyky
 
 ### 6.1 ⭐ Definice (*doh §5.1.1–5.1.2*)
 
