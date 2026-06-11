@@ -43,12 +43,19 @@ Setting: **batch** learning; examples drawn **i.i.d. from an arbitrary, unknown 
 | Failure allowed | no (hard bound) | yes, prob ≤ δ; error ≤ ε tolerated |
 
 **Mutual relation ("does one imply the other?"):**
-- **MB ⇒ PAC**: any mistake-bound learner `L` (bound `M ≤ poly(n)`) converts to a PAC learner: make `L` **lazy** (update only on mistakes), run it over the sample, and **halt when a hypothesis survives `(1/ε)·ln(M/δ)` consecutive examples**; output it. Terminates within `m = (M/ε)·ln(M/δ) ≤ poly` examples; probability that a bad hypothesis (err > ε) survives is `< M·e^{−(ε/ε)ln(M/δ)}·… = δ`. ⇒ **MB learnability is the stronger (more demanding) notion**.
-- **PAC ⇏ MB** in general (PAC tolerates ε error forever; MB demands finitely many mistakes against any order).
+- **MB ⇒ PAC** ⭐ (the conversion, cleanly): let `L` be a mistake-bound learner with bound `M ≤ poly(n)`. Make `L` **lazy** (update only on mistakes) — it then runs through at most **`M+1` distinct hypotheses**. Feed it i.i.d. examples and **output the first hypothesis that survives `k = (1/ε)·ln((M+1)/δ)` consecutive examples without a mistake**.
+  - *Correctness:* a fixed **bad** hypothesis (`err > ε`) survives `k` i.i.d. examples with probability `≤ (1−ε)^k ≤ e^{−εk} = δ/(M+1)`; union bound over the ≤ `M+1` candidates ⇒ `P(some bad hypothesis is output) ≤ δ`.
+  - *Sample size:* at most `(M+1)·k = O((M/ε)·ln(M/δ)) ≤ poly(n, 1/ε, 1/δ)`. ⇒ **MB learnability is the stronger (more demanding) notion.**
+- **PAC ⇏ MB** in general (PAC tolerates ε error forever and relies on i.i.d.; MB demands finitely many mistakes against *any*, even adversarial, order).
 
 ### 1.5 Generic algorithms & learnability conditions
 
-- **Halving algorithm** (MB, version space): keep all consistent hypotheses, predict by **majority vote**, delete wrong ones. Each mistake halves the version space ⇒ **mistake bound `lg|H|`**. ⇒ any finite class with `lg|𝒞| ≤ poly(n)` is **learnable** (but not necessarily *efficiently* — maintaining exponentially many hypotheses is costly).
+- **Halving algorithm** (MB, version space): keep all consistent hypotheses, predict by **majority vote**, delete wrong ones. Each mistake halves the version space (≥ half of the surviving hypotheses voted wrong) ⇒ **mistake bound `lg|H|`**. ⇒ any finite class with `lg|𝒞| ≤ poly(n)` is **learnable** (but not necessarily *efficiently* — maintaining exponentially many hypotheses is costly).
+- **Sandwich of bounds** (Littlestone — ties the whole section together): for the optimal mistake bound `M_opt(𝒞)`:
+  ```
+  VC(𝒞) ≤ M_opt(𝒞) ≤ lg|𝒞|
+  ```
+  *Left:* on a shattered set of size `d` the adversary can make every prediction wrong (some concept always disagrees). *Right:* halving. So poly-VC is necessary for both models, poly-`lg|𝒞|` sufficient (statistically) for both.
 - **Consistency + small `H` ⇒ PAC** ⭐: an algorithm is **𝒞-consistent** if it always returns `h∈H` consistent with the sample (requires `H ⊇ 𝒞`). A 𝒞-consistent algorithm PAC-learns 𝒞 if **`ln|H| ≤ poly(n)`**, with sample size `m = (1/ε)·ln(|H|/δ)` (proof: a fixed bad `h` survives `m` i.i.d. examples w.p. `≤(1−ε)^m < e^{−εm}`; union bound over `|H|`).
 - **PAC output must be consistent**: a PAC learner's hypothesis is necessarily consistent with the training set (else an adversarial `P`, ε, δ break the guarantee).
 - **Necessary & sufficient conditions for learnability** ⭐:
@@ -143,6 +150,7 @@ Uₜ(aᵢ) = Q̂(aᵢ) + √( (1/2N(aᵢ)) · log(2t/δ) ),   aₜ = argmaxₐ U
 ```
 (bonus from **Hoeffding's inequality**: with prob ≥ 1−δ the true Q lies below the bound). Rarely-pulled arms get a big bonus → automatic, *directed* exploration; the bonus shrinks as `N(a)` grows.
 - **Regret guarantee** ⭐: UCB achieves **sublinear regret `O(√(mT log T))`** (m arms); in the gap-dependent form, regret grows only **logarithmically in T** — `O(Σᵢ (log T)/Δᵢ)`, matching the **Lai–Robbins lower bound** asymptotically (UCB1, Auer et al. 2002). *(Verified.)*
+- ⭐ **Why log regret — 3-line sketch** (the expected follow-up): a suboptimal arm `aᵢ` with gap `Δᵢ = V*−Q(aᵢ)` is pulled only while its bound beats the optimal arm's, which (when the confidence intervals hold) requires its bonus `√(log t / 2N(aᵢ))` to exceed ≈ `Δᵢ/2`. That fails once `N(aᵢ) ≳ (2/Δᵢ²)·log T` ⇒ each suboptimal arm is pulled **O(log T/Δᵢ²)** times, contributing `Δᵢ·N(aᵢ) = O(log T/Δᵢ)` regret; bad-confidence rounds add only O(1) (Hoeffding tail). Contrast: ε-greedy keeps paying `Θ(ε·Δ)` per step **forever** ⇒ linear — UCB's exploration is *directed and self-extinguishing*.
 
 ### 3.4 Thompson sampling (probability matching) ⭐
 
@@ -164,7 +172,12 @@ Uₜ(aᵢ) = Q̂(aᵢ) + √( (1/2N(aᵢ)) · log(2t/δ) ),   aₜ = argmaxₐ U
 - **Policy** `π(a|s)`; **state-value (utility)** `V^π(s) = E[Gₜ | Xₜ=s, π]`; **action-value** `Q^π(s,a)`.
 - **Bellman expectation equation**: `V^π(s) = R(s,π(s)) + γ Σ_{s'} P(s'|s,π(s)) V^π(s')` (linear system — solvable exactly, or by iterated **Bellman backup**).
 - **Optimal policy** `π*`: `V*(s) = max_π V^π(s)`; **Bellman optimality**: `V*(s) = maxₐ [R(s,a) + γΣ_{s'}P(s'|s,a)V*(s')]`; `π*(s) = argmaxₐ Q*(s,a)` (greedy w.r.t. V*).
-- **Value iteration (VI)** ⭐: repeat `V ← B[V]` (Bellman optimality backup) until convergence; **converges for γ<1 from any init** because the backup is a **γ-contraction** in ∞-norm (Banach fixed point). Extract π* greedily. Finite-horizon version: backward induction.
+- **Value iteration (VI)** ⭐: repeat `V ← B[V]` (Bellman optimality backup) until convergence; **converges for γ<1 from any init** because the backup is a **γ-contraction** in ∞-norm (Banach fixed point: `‖B[V]−B[V']‖∞ ≤ γ‖V−V'‖∞`). Extract π* greedily. Finite-horizon version: backward induction.
+
+  ⭐ **Worked mini-example (2 states, board-ready).** States `{s₁, s₂}`, `γ = 0.5`. In `s₁`: action `stay` → reward 1, stay in `s₁`; action `go` → reward 0, move to `s₂`. In `s₂`: only `stay` → reward 2, stays. Start `V⁰ = (0,0)`:
+  - `V¹(s₁) = max(1 + 0.5·0, 0 + 0.5·0) = 1`; `V¹(s₂) = 2 + 0.5·0 = 2`.
+  - `V²(s₁) = max(1 + 0.5·1, 0 + 0.5·2) = 1.5`; `V²(s₂) = 2 + 0.5·2 = 3`.
+  - `V³(s₁) = max(1+0.75, 0+1.5) = 1.75`; `V³(s₂) = 3.5` … converging to the fixed point `V*(s₂) = 2/(1−0.5) = 4`, `V*(s₁) = max(1+0.5·V*(s₁), 0.5·4) = max(2, 2) = 2` (both actions tie here; with reward 2.1 in s₂, `go` wins). Shows: backups propagate value backward one step per sweep; convergence is geometric at rate γ.
 - **Policy iteration**: alternate **policy evaluation** (solve V^π) and **policy improvement** (greedy w.r.t. Q^π); converges in finitely many iterations (improvement is monotone).
 
 ### 4.2 Learning when the model is unknown

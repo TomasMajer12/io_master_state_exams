@@ -33,7 +33,7 @@
 - **Subgraph** *(podgraf)*; **spanning subgraph / factor** *(faktor)*: $V(H)=V(G)$, drop only edges; **induced subgraph** *(indukovaný podgraf)*: drop vertices + incident edges.
 - Degrees: $\delta^+(v)$ out-edges, $\delta^-(v)$ in-edges, $\delta(v)$ incident; $\sum_v|\delta(v)|=2|E|$; **#odd-degree vertices is even**.
 - $\delta^+(X),\delta^-(X),\delta(X)$ — edges leaving / entering / bordering a vertex **set** $X$ (used everywhere in flows).
-- **Walk** *(tah)* = no repeated edge; **path** *(cesta)* = no repeated vertex; **cycle/circuit** *(cyklus/kružnice)* = closed.
+- ⭐ **Walk** *(sled)* = any alternating sequence of vertices/edges — repeats allowed; **trail** *(tah)* = walk with no repeated **edge**; **path** *(cesta)* = walk with no repeated **vertex**; **cycle/circuit** *(cyklus/kružnice)* = closed trail/path. (Filip 2018 asked exactly "definujte tah, sled a cestu" — these three, in Czech, with the differences.)
 - **Tree** *(strom)* = connected acyclic undirected graph; $n$ nodes ⇒ $n-1$ edges; unique path between any two vertices; **spanning tree** *(kostra)* exists for every connected graph.
 - **Strongly connected** *(silně souvislý)* digraph: path both ways for every pair; **topological order** exists ⇔ graph is a **DAG** *(acyklický)*.
 
@@ -89,6 +89,16 @@ $$\min\sum_{i,j} c_{ij}x_{ij}\quad \text{s.t.}\quad \sum_j x_{ij}=1\ (\text{leav
 $$s_i + c_{ij} - (1-x_{ij})M \le s_j\quad (i=1..n,\ j=2..n)\ \text{— Miller–Tucker–Zemlin subtour elimination.}$$
 The enter/leave constraints alone allow disjoint sub-tours; the $s_i$ ("time of entering node $i$") + big-$M$ forbid them.
 
+⭐ **The alternative formulation Šůcha asks about** ("jak by šlo zadefinovat TSP ještě jinak?", 2023): **DFJ (Dantzig–Fulkerson–Johnson) subtour-elimination constraints** — for every proper subset $S \subset V$, $2 \le |S| \le n-1$:
+$$\sum_{i \in S}\sum_{j \notin S} x_{ij} \ge 1 \qquad\text{(every subset must be left at least once)},$$
+equivalently $\sum_{i,j\in S} x_{ij} \le |S|-1$. There are **exponentially many** such constraints, so they are added **lazily** *(lazy constraints)*: solve without them, find a subtour in the integer solution, add only the violated constraint, re-solve. This was the KO homework — that's why he probes it.
+
+| | MTZ | DFJ (lazy) |
+|---|---|---|
+| #constraints | $O(n^2)$ — polynomial, all upfront | $O(2^n)$ — added on demand |
+| LP relaxation | weak (big-$M$) | **tight** — basis of branch-and-cut |
+| Practice | small instances, simple to state | what real solvers (Concorde) use |
+
 **2-partition** *(rozdělení na 2 stejné části)*: $x_i\in\{0,1\}$, $\sum_i x_i p_i = \tfrac12\sum_i p_i$. One of the "easiest" NP-complete problems; equivalent to $P2||C_{\max}$ scheduling. Fractional variant ($x_i\in\langle0,1\rangle$) is LP, hence polynomial (≈ preemptive scheduling).
 
 **Knapsack** *(batoh)*: $\max\sum_i c_ix_i$ s.t. $\sum_i w_ix_i\le W$, $x_i\in\{0,1\}$. The "buildings" selection example on the slides is exactly this 0/1 form (see §4). Cf. §4 for the DP/FPTAS algorithms.
@@ -116,7 +126,7 @@ Note the pattern: vertex cover and independent set are complementary ($x_v\mapst
 These appear repeatedly on the exam and underpin the scheduling models (§6):
 
 - **Logical constraints via binaries:** "buy building $i$" $x_i\in\{0,1\}$; "if 1 then 2" ⇒ $x_2\ge x_1$; "not both 3 and 4" ⇒ $x_3+x_4\le1$; "exactly one of 5,6" ⇒ $x_5+x_6=1$ (XOR).
-- **Link a binary to an integer/continuous var** ("activate machine $i$ only if used"): $x_i\le M\,y_i$ with $y_i\in\{0,1\}$ forces $y_i=1$ whenever $x_i>0$.
+- ⭐ **Fixed costs** *(fixní náklady)* — Hanzálek asks for this by name (2013, 2016): pay a one-off cost $d_i$ whenever activity $x_i > 0$ runs at all. Binary switch $y_i\in\{0,1\}$, **linking constraint** $x_i\le M\,y_i$ (forces $y_i=1$ whenever $x_i>0$), objective $\min \sum_i (c_i x_i + d_i y_i)$. The same linking trick covers "activate machine $i$ only if used".
 - **One of several discrete values** (e.g. capacity $\in\{40,80,120,160\}$): $\sum_k a_k v_k$ with $\sum_k v_k=1$, $v_k\in\{0,1\}$.
 - **Disjunction — at least one of two constraints (OR)** via big-$M$ and a switch $y\in\{0,1\}$:
 $$f_1(x)\le b_1+M\,y,\qquad f_2(x)\le b_2+M\,(1-y).$$
@@ -238,6 +248,8 @@ for k:=1 to n:
 
 **Complexity:** an augmenting path takes $O(|E|)$. Integer capacities: each iteration adds ≥1, so $O(|E|\cdot F)=O(|E|^2 U)$ ($U=\max u$, $F=$ max-flow value). **Edmonds–Karp** (always take **shortest** augmenting path via BFS) → $O(|V|\,|E|^2)$, independent of capacities. (Non-integer capacities + bad choices: FF may not even terminate.)
 
+⭐ **Why Edmonds–Karp is $O(|V||E|^2)$** — Berezovskyj's follow-up (2019) that the student didn't know: with BFS augmenting paths, the residual distance $d(s,v)$ **never decreases** during the run. Each augmentation **saturates** at least one bottleneck edge; a saturated edge $(u,v)$ can only reappear in the residual graph after flow is pushed back, which requires $d(u)$ to have grown by $\ge 2$. Distances are bounded by $|V|$ ⇒ each edge is critical $O(|V|)$ times ⇒ $O(|V||E|)$ augmentations × $O(|E|)$ per BFS $= O(|V||E|^2)$. (His other favorite: "how big an instance in 1 hour at $10^8$ ops/s" — set $nm^2 \approx 3.6\cdot10^{11}$, e.g. sparse $m\approx n$ gives $n \approx 7000$.)
+
 ### 3.3 Minimum cut & max-flow = min-cut ⭐⭐
 
 **Cut** *(řez)* $\delta(A)$ given by vertex set $A$ with $s\in A,\ t\notin A$; **capacity** $C(A)=\sum_{e\in\delta^+(A)}u(e)-\sum_{e\in\delta^-(A)}l(e)$.
@@ -252,7 +264,14 @@ for k:=1 to n:
 
 **Reduction to max flow:** add super-source $s$ with edges $(s,v),u=b(v)$ for $b(v)>0$; super-sink $t$ with edges $(v,t),u=-b(v)$ for $b(v)<0$; solve max flow; feasible **iff** all $s$/$t$ edges saturate.
 
-**Initial feasible flow with $l(e)>0$** (needed to start FF): add circulation arc $t\to s$ ($u=\infty$), substitute $f(e)=f'(e)+l(e)$ → a Feasible-Flow-with-Balances instance with **zero** lower bounds and $b(v)=\sum_{\delta^-(v)}l-\sum_{\delta^+(v)}l$ → solve as max flow. So: nonzero-lower-bound flow → feasible-flow-with-balances → max flow.
+⭐⭐ **Initial feasible flow with $l(e)>0$** — Hanzálek's favorite ("za nenulový počáteční tok byl hodně šťastný", asked 2012, 2013, 2018). FF needs *some* feasible flow to start; with all $l(e)=0$ take $f\equiv0$, but with $l(e)>0$ zero is infeasible. Full recipe to deliver at the board:
+
+1. **Close the network:** add a circulation arc $t\to s$ with $u=\infty$ — now Kirchhoff must hold at *every* vertex (a circulation problem).
+2. **Shift out the lower bounds:** substitute $f(e) = f'(e) + l(e)$, i.e. pretend the compulsory $l(e)$ units already flow. New bounds: $0 \le f'(e) \le u(e) - l(e)$. The pre-pushed $l$-flow violates Kirchhoff at vertices where in-lower-bounds ≠ out-lower-bounds; record the imbalance as a **balance** $b(v)=\sum_{e\in\delta^-(v)}l(e)-\sum_{e\in\delta^+(v)}l(e)$.
+3. **Solve Feasible Flow with Balances** (§3.4 super-source/super-sink construction) as a max-flow problem with zero lower bounds — FF can start from $f'\equiv0$ there.
+4. If all super-source/sink edges saturate → $f(e) = f'(e) + l(e)$ is a feasible initial flow; otherwise **no feasible flow exists**.
+
+Chain to remember: *nonzero lower bounds → circulation + substitution → feasible flow with balances → max flow from zero.*
 
 ### 3.5 Minimum cost flow & cycle-canceling ⭐⭐
 
@@ -370,6 +389,13 @@ Add the **triangle inequality** $c(i,j)+c(j,k)\ge c(k,i)$. Still strongly NP-har
 
 > Per slides ([L6]/KV) these bounds "cannot be improved" within these methods. *Context note: the metric-TSP $3/2$ barrier was slightly beaten in 2021 (Karlin–Klein–Oveis Gharan) — beyond the course.*
 
+### 5.4b Exact TSP algorithms ⭐ (2022 exam question: "best known 0-error algorithms, how large instances, their essence, complexity")
+
+- **Brute force:** $(n-1)!/2$ tours — dead by $n\approx15$.
+- **Held–Karp dynamic programming** [1962]: state = (subset $S\ni1$ of visited cities, last city $j\in S$); $D(S,j)=\min_{i\in S\setminus\{j\}} D(S\setminus\{j\},i)+c_{ij}$. **$O(n^2 2^n)$ time, $O(n2^n)$ memory** — the best *guaranteed* bound known; practical to $n\approx20$–$25$ (memory dies first).
+- **Branch & cut** (= B&B + cutting planes): solve the LP relaxation of the DFJ formulation (§1.3), add violated subtour-elimination (and comb) inequalities lazily, branch on fractional variables. Essence: **tight LP lower bounds prune the B&B tree**. This is **Concorde**, which has solved real instances with **tens of thousands of cities** (record: 85,900 — pla85900, 2006) — exponential worst case, spectacular in practice.
+- Components to explain if asked "jednotlivé části": LP relaxation (lower bound, polynomial per node), separation oracle for violated cuts (min-cut computation), branching, plus a good initial tour from heuristics (k-OPT / Lin–Kernighan) as the upper bound.
+
 ### 5.5 Local search — $k$-OPT ⭐
 
 Start from any tour; repeatedly **remove $k$ edges and reconnect** with other edges if it shortens the tour.
@@ -429,6 +455,7 @@ while tasks remain:
 - **List Scheduling (LS)** for $P|prec|C_{\max}$ (and $P||C_{\max}$): whenever a resource is free, assign the first **available** task from list $L$. Graham 1966: **$r_{LS}=2-\tfrac1R$** for arbitrary list. Exhibits **anomalies** (makespan can *increase* when $p_i$ decrease, precedences removed, or $R$ grows).
 - **LPT (Longest Processing Time first)** for $P||C_{\max}$: LS with $L$ sorted by nonincreasing $p_i$. **$r_{LPT}=\tfrac43-\tfrac1{3R}$**, $O(n\log n)$.
 - **DP — Rothkopf**, $P||C_{\max}$ pseudopolynomial: $x_i(t_1,..,t_R)=1$ iff tasks $1..i$ fit with resource $v$ busy on $\langle0,t_v\rangle$; recurrence ORs over the $R$ resources. **Complexity $O(n\cdot UB^R)$** — pseudopoly for **fixed $R$** (weakly NP-hard); for $R=\text{poly}(n)$ the problem is **strongly NP-hard** (3-Partition).
+- ⭐ **"How would you solve $P||C_{\max}$ optimally?"** (Šůcha 2023) — expected answer: **ILP**. Variables $x_{ij}\in\{0,1\}$ ($=1$ iff task $i$ runs on resource $j$) and makespan $C_{\max}\ge0$: $\min C_{\max}$ s.t. $\sum_j x_{ij}=1$ for every task (assigned exactly once) and $\sum_i p_i\,x_{ij}\le C_{\max}$ for every resource (no machine exceeds the makespan). He then probes the variables — be ready to name them and both constraint families. (Other exact options: Rothkopf DP above, B&B.)
 - **$P|pmtn,prec|C_{\max}$ — Muntz–Coffman level algorithm:** assign by task **level** (longest remaining path to a sink), splitting capacity; exact for $P2|pmtn,prec|C_{\max}$ and $P|pmtn,forest|C_{\max}$, else **$r=2-\tfrac2R$**, $O(n^2)$.
 
 ### 6.6 Project Scheduling with temporal constraints ⭐⭐

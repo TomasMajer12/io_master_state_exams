@@ -75,6 +75,9 @@ For finite `H` the bound used `|H|`; for infinite `H ⊆ {−1,+1}ˣ` we need a 
 - **Shattering**: a set `{x¹,…,xᵐ}` is **shattered** by `H` if for *every* labeling `y∈{−1,+1}ᵐ` there is an `h∈H` realizing it (`h(xⁱ)=yⁱ ∀i`). (i.e. `H` can produce all `2ᵐ` dichotomies.)
 - **VC dimension** `VC(H)` = size of the **largest** set that `H` can shatter.
 - **Theorem**: the VC dimension of all **two-class linear classifiers** `h(x)=sign(⟨w,φ(x)⟩+b)` in an `n`-dim feature space is **`n+1`**. *(Verified.)*
+  - ⭐ **Proof sketch** (two directions, as the oral demands): *(≥ n+1)* exhibit a shattered set — the origin plus the `n` unit vectors `e₁..e_n`: for any labeling choose `wᵢ = yᵢ`, `b = y₀/2`-style construction (each point's label is controlled by its own coordinate ⇒ all `2ⁿ⁺¹` dichotomies realizable). *(< n+2)* no set of `n+2` points can be shattered: by **Radon's theorem** any `n+2` points in `ℝⁿ` can be split into two disjoint subsets whose convex hulls intersect; a linear classifier cannot label these two subsets `+/−` (the hulls' common point would need both signs).
+  - **Quick examples to have ready**: thresholds on `ℝ` (`sign(x−θ)`): VC = 1; intervals on `ℝ`: VC = 2; axis-aligned rectangles in `ℝ²`: VC = 4; `sin(ωx)` classifiers: VC = ∞ (one parameter, infinite capacity — **VC ≠ #parameters!**).
+  - **Intuition for the bound**: with `d = VC(H)` finite, the number of distinct behaviors of `H` on `m` points grows only **polynomially** `(em/d)^d` (Sauer's lemma) instead of `2^m` — that polynomial replaces `|H|` in the finite-class bound.
 - **ULLN via VC** (`d = VC(H) < ∞`): `P(sup_{h∈H}|R(h)−R_Tᵐ(h)| ≥ ε) ≤ 4·(2em/d)ᵈ·e^{−mε²/8}` → ⇒ ULLN holds with `m_H^{ull}(ε,δ) ≤ C·(d − log δ)/ε²`. **Finite VC dimension ⇒ ERM is PAC-successful**, even for infinite `H`.
 
 ### 1.8 Support Vector Machines (SVM) ⭐
@@ -90,7 +93,18 @@ min_{w,b,ξ}  ½‖w‖² + (C/m) Σᵢ ξᵢ
 s.t.  yⁱ(⟨w,φ(xⁱ)⟩ + b) ≥ 1 − ξᵢ ,   ξᵢ ≥ 0 ,  ∀i
 ```
 - `ξᵢ` = slack (margin violation); **`C`** trades off margin width vs. training error (tuned on validation). Large `C` → fits training data harder (larger `‖w‖`); small `C` → wider margin, more regularization.
-- The **geometric margin** is `1/‖w‖`; SVM maximizes the margin subject to (soft) correct classification.
+- ⭐ **Why the margin is `1/‖w‖`** (be able to show): the distance of a point `x` from the hyperplane `f(x)=⟨w,x⟩+b=0` is `|f(x)|/‖w‖`. The constraints force `yⁱf(xⁱ) ≥ 1`, with equality on the closest (support) points — the **canonical** scaling `|f|=1` there. Their distance is therefore `1/‖w‖` on each side ⇒ **minimizing `½‖w‖²` = maximizing the margin** `2/‖w‖`.
+
+⭐ **Primal → dual derivation** (the "derive it" item — 4 steps):
+
+1. **Lagrangian** with multipliers `αᵢ ≥ 0` (margin constraints) and `βᵢ ≥ 0` (slack non-negativity):
+   `Λ = ½‖w‖² + (C/m)Σᵢξᵢ − Σᵢ αᵢ[yⁱ(⟨w,φ(xⁱ)⟩+b) − 1 + ξᵢ] − Σᵢ βᵢξᵢ`.
+2. **Stationarity (KKT)** — set derivatives w.r.t. the primal variables to zero:
+   `∂Λ/∂w = 0 ⇒ w = Σᵢ αᵢyⁱφ(xⁱ)` (the **representer** form);
+   `∂Λ/∂b = 0 ⇒ Σᵢ αᵢyⁱ = 0` (the dual equality constraint);
+   `∂Λ/∂ξᵢ = 0 ⇒ C/m = αᵢ + βᵢ`, and `βᵢ≥0` gives the **box** `0 ≤ αᵢ ≤ C/m`.
+3. **Substitute back** — the `‖w‖²` and cross terms collapse into `Σᵢαᵢ − ½ΣᵢΣⱼ αᵢαⱼyⁱyʲ⟨φ(xⁱ),φ(xʲ)⟩` ⇒ the dual below.
+4. **Complementary slackness** explains sparsity: `αᵢ[yⁱf(xⁱ)−1+ξᵢ]=0` — points strictly outside the margin have `αᵢ=0`; only **support vectors** (on/inside the margin) get `αᵢ>0`. Margin SVs (`0<αᵢ<C/m`) have `ξᵢ=0` ⇒ `yⁱf(xⁱ)=1`, which is how `b*` is recovered.
 
 **Dual SVM** (via Lagrangian + strong duality):
 ```
@@ -132,6 +146,7 @@ The dual (and the classifier) use the data **only through dot products** `⟨φ(
 
 - **Bias**: the MLE *can be biased* for finite `m` (e.g. the ML variance estimator `(1/m)Σ(x−x̄)²` is biased), but is **asymptotically unbiased**.
 - **Consistency**: the MLE is **consistent under (mild) regularity conditions** — chiefly that the log-likelihood **converges uniformly** to the expected log-likelihood (a ULLN-type condition) and identifiability.
+  - ⭐ **Why (the KL intuition, 2 lines):** by LLN, `L_Tᵐ(θ) → E_{x∼p_{θ*}}[log p_θ(x)] = −KL(p_{θ*}‖p_θ) + const`. The KL divergence is `≥0` with equality iff `p_θ = p_{θ*}` ⇒ the limiting objective is **uniquely maximized at `θ*`** (given identifiability), so the maximizer of the empirical objective converges there. *MLE = minimizing KL divergence between the empirical distribution and the model family.*
 - **Asymptotic optimality**: the MLE has the **smallest possible asymptotic variance** — it attains the **Cramér–Rao lower bound** (asymptotically efficient), with `θₘ ≈ N(θ*, I(θ*)⁻¹/m)` (`I` = Fisher information).
 
 ### 2.3 Latent variables → the EM algorithm
@@ -222,6 +237,17 @@ A method to compute the **gradient `∇L(w)`** of the loss w.r.t. all parameters
   ```
   i.e. each module only needs to know **how to push a gradient message through itself** (`∂out/∂in` and `∂out/∂params`). Local parameter gradients `∂L/∂wˡ` are then read off. Cost ≈ one forward + one backward pass (same order as evaluation).
 
+⭐ **Concrete MLP equations** (the board-ready version). Layer `l`: pre-activation `sˡ = Wˡaˡ⁻¹ + bˡ`, activation `aˡ = f(sˡ)`; loss `L` after layer `L̄`. With `δˡ := ∂L/∂sˡ`:
+
+```
+output layer:    δᴸ = ∇_a L ⊙ f'(sᴸ)        (⊙ = elementwise)
+                 (softmax + cross-entropy collapses to δᴸ = a − y_onehot)
+backward step:   δˡ = ((Wˡ⁺¹)ᵀ δˡ⁺¹) ⊙ f'(sˡ)
+parameter grads: ∂L/∂Wˡ = δˡ (aˡ⁻¹)ᵀ ,   ∂L/∂bˡ = δˡ
+```
+
+- ⭐ **Vanishing/exploding gradients**: the backward recursion multiplies Jacobians `(Wˡ)ᵀ·diag(f'(sˡ))` across layers — a product of many factors `<1` vanishes, `>1` explodes. Sigmoid saturates with `max f' = 0.25` ⇒ deep sigmoid nets vanish. **Remedies**: ReLU (`f'=1` on the active half), variance-preserving init (§3.5), batch normalization, residual connections (§3.4b), gradient clipping (for explosion).
+
 ### 3.4 Convolutional Neural Networks (CNNs) ⭐
 
 Motivated by the visual cortex (nearby cells process nearby regions). Replace dense layers with **convolutional layers** to exploit image structure:
@@ -230,6 +256,13 @@ Motivated by the visual cortex (nearby cells process nearby regions). Replace de
 - **Multiple filters** `D` → `D` output **feature maps** (the "depth" of the output volume).
 - **Hyperparameters**: filter size `F`, **stride `S`** (step; larger `S` → smaller output), **zero-padding `P`** (preserve spatial size). Output size `= (W − F + 2P)/S + 1`.
 - A **nonlinearity** (ReLU) follows the convolution; **pooling** (e.g. max-pooling) downsamples for translation invariance and to grow the receptive field. Deep CNNs learn a **feature hierarchy** (edges → parts → objects).
+
+### 3.4b Other layer types (official topic says "layer types" — know these four)
+
+- **Pooling** (max/average): downsamples feature maps; translation invariance; no parameters.
+- **Batch normalization**: normalize each channel over the mini-batch to zero mean/unit variance, then rescale with learned `γ,β`. Stabilizes/accelerates training (reduces internal covariate shift, smooths the loss landscape), adds slight regularization; at test time uses running statistics.
+- **Dropout**: during training randomly zero each activation with probability `p` (scale by `1/(1−p)`); prevents co-adaptation, acts as an implicit ensemble of subnetworks; off at test time.
+- **Residual / skip connections** (ResNet): `aˡ⁺¹ = f(F(aˡ) + aˡ)` — the identity path lets gradients flow unattenuated through very deep nets (solves degradation; enabled 100+ layer training).
 
 ### 3.5 Parameter initialization
 

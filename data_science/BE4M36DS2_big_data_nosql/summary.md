@@ -201,6 +201,18 @@ Open-source (Apache, Java) implementation derived from Google MapReduce + **GFS*
 - **CRUD** in **CQL** (SQL-like): `CREATE KEYSPACE … WITH replication = {…}`; `CREATE TABLE`; `INSERT INTO … VALUES …` (actually an *upsert*); `SELECT … WHERE partition_key = …` (queries must generally restrict the partition key); `UPDATE`; `DELETE` (writes **tombstones**).
 - **Tunable consistency** ⭐: consistency level **per operation** (ONE, QUORUM, ALL, LOCAL_QUORUM…) — the quorum machinery of §1.6 made concrete; **read repair** fixes stale replicas during reads. Writes go to a commit log + memtable → flushed to **SSTables** (LSM-tree → write-optimized).
 
+⭐ **Wide-column vs relational — the Krátký debate** (he counters every point with "to můžeme i s relační DB"; have *systemic* arguments ready, not feature lists):
+
+| | Relational | Wide-column (Cassandra) |
+|---|---|---|
+| Schema | fixed columns per table; ALTER is global | **each row its own columns**; sparse data stored sparsely (no NULL storage) |
+| Data layout | row store, B-tree indexes — read-optimized | partition-per-node + **LSM/SSTables — write-optimized**, sequential disk I/O |
+| Scaling unit | scale-up (shared storage / complex sharding bolted on) | **shard-per-partition-key is the data model itself** — linear scale-out is native, not added |
+| Consistency | ACID transactions, joins | **tunable per operation**; no joins — denormalize, model query-first |
+| Failure model | failover of a primary | p2p ring, no SPOF, gossip |
+
+The honest concession (he pushes until you say it): yes, a sharded RDBMS *can* be built — but you then **manually** reimplement partitioning, rebalancing, and replication that Cassandra gives natively, and you lose cross-shard joins/transactions anyway — so the relational advantages you were defending are gone exactly at scale. The trade is **consistency+joins ↔ availability+linear writes** (CAP, §1.5), not "feature X".
+
 ### 4.3 MongoDB (document store)
 
 - **JSON/BSON document database**: documents (max 16 MB) in **collections**; flexible schema; `_id` primary key (auto ObjectId); secondary **indexes**; **replica sets** (master–slave with automatic failover) + **sharding**; comprehensive **aggregation framework**; geospatial queries. (Vs Redis: Redis = in-memory KV with limited querying; MongoDB = disk-based with rich queries inside documents.)
@@ -277,7 +289,20 @@ Declarative pattern-matching query language (inspired by SQL clauses + SPARQL pa
 ## 6. Supplementary: data formats (lectures 1–2)
 
 - **Structured vs semi-structured vs unstructured** data; semi-structured = "self-describing", schema optional.
-- **JSON** (objects/arrays/scalars; JSON Schema; BSON = binary JSON in MongoDB), **XML** (elements/attributes; DTD/XSD; XPath/XQuery — *legacy state-exam question!* XPath = path expressions + **axes** (child, descendant, parent, ancestor, following-sibling…); XQuery = **FLWOR** expressions: For-Let-Where-Order by-Return), **CSV/TSV**, binary formats (**Avro, Parquet, ORC** — columnar, splittable, compressed; for Hadoop pipelines), **RDF** serializations (→ OSW).
+- **JSON** (objects/arrays/scalars; JSON Schema; BSON = binary JSON in MongoDB), **XML** (elements/attributes; DTD/XSD), **CSV/TSV**, binary formats (**Avro, Parquet, ORC** — columnar, splittable, compressed; for Hadoop pipelines), **RDF** serializations (→ OSW).
+
+⭐ **XPath / XQuery** — *flagged legacy, but Krátký asked it verbatim in 2023* (axes + FLWOR on a self-invented example):
+
+- **XPath path expressions**: steps `axis::node-test[predicate]`, abbreviated `/bookstore/book[@year>2000]/title`. **Axes** (the part he wants enumerated): `child` (default), `descendant`, `descendant-or-self` (`//`), `parent` (`..`), `ancestor`, `ancestor-or-self`, `self` (`.`), `attribute` (`@`), `following-sibling`, `preceding-sibling`, `following`, `preceding`.
+- **XQuery FLWOR** (For–Let–Where–Order by–Return) — have a tiny example ready:
+  ```xquery
+  for $b in doc("books.xml")//book
+  let $p := $b/price
+  where $p > 500 and $b/@year >= 2010
+  order by $b/title
+  return <cheap>{ $b/title/text() }</cheap>
+  ```
+  `for` iterates a sequence, `let` binds without iterating, `where` filters, `order by` sorts, `return` constructs (possibly new XML) per binding.
 - Format choice drives: splittability (MapReduce!), schema evolution, compression, human readability.
 
 ## 7. Cross-subject links
