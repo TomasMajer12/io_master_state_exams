@@ -7,7 +7,7 @@
 **Structure** mirrors the 5 official exam topics (see `../../00_subjects_overview.md`):
 
 1. [Asymptotic complexity; graph basics, representations & matrices; traversals](#1-asymptotic-complexity-graph-basics-and-representations)
-2. [MST, strongly connected components, Euler trail, Union-Find, isomorphism](#2-mst-scc-euler-trail-union-find-isomorphism)
+2. [MST, strongly connected components, Euler trail, Union-Find, isomorphism](#2-mst-scc-euler-trail-union-find-isomorphism) — incl. §2.7 shortest paths (formally KO, but asked under PAL)
 3. [Combinatorial generation, Gray codes, primes, pseudorandom numbers](#3-combinatorial-generation-gray-codes-primes-prng)
 4. [Search trees](#4-search-trees)
 5. [Finite automata and text search](#5-finite-automata-and-text-search)
@@ -42,6 +42,15 @@ For non-negative $f,g:\mathbb{N}\to\mathbb{R}_{\ge0}$:
 - **Walk** *(sled)* — edges/vertices may repeat; **trail** *(tah)* — no repeated **edge**; **path** *(cesta)* — no repeated **vertex**; **circuit/cycle** *(kružnice/cyklus)* — closed trail/path.
 - **Subgraph** $H$: $V(H)\subseteq V(G)$, $E(H)\subseteq E(G)\cap\binom{V(H)}{2}$. **Spanning subgraph (factor)**: $V(H)=V(G)$. **Spanning tree** *(kostra)*: spanning subgraph that is a tree.
 - **Connected component of $v$**: $C(v)=\{u\mid\exists$ path $u\!-\!v\}$. **DAG** *(acyklický orientovaný graf)*: digraph with no directed cycle ⇔ has a topological order.
+
+⭐ **Definitions examiners pull out of you** (Šára, Mařík, Vyskočil all did — see `questions.md` Q6, Q17, Q21):
+
+- **Complete graph** $K_n$ *(úplný graf)*: every pair adjacent; $|E|=\binom n2=\tfrac{n(n-1)}2$ — follow-up "how many edges?" is routine.
+- **Multigraph**: parallel edges and/or loops allowed (a *simple* graph has neither). Asked verbatim by Šára.
+- **Regular graph**: all degrees equal ($k$-regular).
+- **Tree** *(strom)* — know the **equivalent characterizations** and be able to argue any two: connected + acyclic ⇔ connected with $|E|=|V|-1$ ⇔ acyclic with $|E|=|V|-1$ ⇔ unique path between every pair ⇔ minimally connected (removing any edge disconnects) ⇔ maximally acyclic (adding any edge creates a cycle). **Forest** = acyclic (disjoint union of trees).
+- **Spanning tree exists ⇔ $G$ is connected.** ⚠ Classic stumble (cost a student his flow at the 2015 exam): the spanning tree must contain **all vertices** of $G$ — say "spanning subgraph that is a tree", not just "tree inside $G$".
+- **Connectivity** *(souvislost)*: undirected $G$ is connected iff every pair is joined by a path; for digraphs distinguish **weakly connected** (underlying undirected graph connected) vs. **strongly connected** (mutually reachable, §2.3).
 
 ### 1.3 ⭐ Graph representations and matrices
 
@@ -90,10 +99,25 @@ MST of weighted $G=(V,E,w)$ = spanning tree $K$ minimizing $\sum_{e\in K}w(e)$. 
 | **Kruskal** | sort edges ascending; add an edge iff it joins two different components | **Union-Find** | $O(\lvert E\rvert\log\lvert V\rvert)$ (sort dominates) |
 | **Borůvka** *(Borůvkův/Sollin)* | each round, every component picks its cheapest outgoing edge; add all, merge | component labelling by DFS | $O(\lvert E\rvert\log\lvert V\rvert)$ |
 
+**⭐ Why each algorithm is correct** (asked explicitly: "co je řez a proč algoritmy zaručují správný výsledek", 2016):
+
+- **Jarník–Prim:** at every step the cut is (current tree $T$ | rest); the edge added is the lightest crossing it ⇒ by the cut property it belongs to the MST. Invariant: $T$ is always a subtree of the MST.
+- **Kruskal:** when edge $e=\{u,v\}$ is accepted, consider the cut (component of $u$ | everything else). All previously rejected/unprocessed edges crossing it are heavier (edges come sorted) ⇒ $e$ is the lightest crossing edge ⇒ in the MST.
+- **Borůvka:** each component's cheapest outgoing edge is the lightest edge of the cut (that component | rest) ⇒ in the MST; all picks in a round are MST edges simultaneously.
+
+**⭐ Kruskal complexity, derived step by step** (Vyskočil made a student derive it, 2022):
+sort $|E|$ edges: $O(|E|\log|E|)=O(|E|\log|V|)$ because $|E|\le|V|^2\Rightarrow\log|E|\le2\log|V|$; then $|E|$× (Find+Find+maybe Union) at amortized $\alpha(|V|)$ each: $O(|E|\,\alpha(|V|))$. Total dominated by the sort: $\boxed{O(|E|\log|V|)}$.
+
 - **Prim ≈ Dijkstra** *([mst3])*: identical loop; only the relaxation key differs — Prim uses `key = w(u,v)`, Dijkstra `key = u.dist + w(u,v)`.
 - ⭐ **PQ trick** *([mst3])*: standard priority queues cannot *decrease-key* without a handle, so **insert a copy** of a vertex on each improvement and **skip already-CLOSED copies** when popped (`while(closed[v=pq.poll()]);`).
-- **Borůvka** needs distinct weights; **terminates in $\le\lceil\log_2\lvert V\rvert\rceil$ rounds** because each surviving component at least doubles its size every round.
-- ⭐ **Near-linear Kruskal** *([mst3])*: with union-by-rank + path compression the Union-Find work is $O(\lvert E\rvert\,\alpha(\lvert V\rvert))\approx O(\lvert E\rvert)$, so the bottleneck is the **edge sort**; if edges can be sorted in linear time (counting/radix/bucket) Kruskal is $\Theta(\lvert E\rvert)$.
+- ⭐ **Borůvka needs distinct weights** — asked "kdy nebude fungovat?" (2016). With ties, two components can each pick the *same-weight different* edges of a tie-cycle and create a **cycle**: e.g. triangle $a\!-\!b\!-\!c$ with all weights 1 — $a$ picks $ab$, $b$ picks $bc$, $c$ picks $ca$ ⇒ cycle. Fix: break ties by edge index (lexicographic), which simulates distinct weights. **Terminates in $\le\lceil\log_2\lvert V\rvert\rceil$ rounds** because each surviving component at least doubles its size every round.
+- ⭐ **Near-linear Kruskal** *([mst3])*: when the **sort is free or linear**, Kruskal beats the bound. Exam variant (Berezovskyj 2017, `questions.md` Q5): MST of a complete graph whose float weights take only **21 distinct values** → **bucket/counting sort in $O(|E|)$** ⇒ whole Kruskal $\Theta(|E|\,\alpha)\approx\Theta(|E|)$; with arbitrary floats in $(100,200)$ no such trick exists → comparison sort $\Theta(|E|\log|V|)$ (the second half of that question — "how large a graph in 1 s" — assume $\sim10^8$ elementary ops/s and solve $|E|\log_2|V|\approx10^8$ with $|E|=\binom{|V|}2$, giving $|V|$ in the low thousands).
+
+**⭐ Worked example to demonstrate at the board** ("na vhodném příkladě ukázat", 2014). Graph: $V=\{a,b,c,d,e\}$, edges $ab\!:\!1,\ bc\!:\!4,\ cd\!:\!2,\ de\!:\!5,\ ea\!:\!3,\ bd\!:\!6$ (a 5-cycle + one chord). MST weight $=1+4+2+3=10$, edges $\{ab,ea,cd,bc\}$.
+
+- *Kruskal* (sorted: 1,2,3,4,5,6): take $ab$(1) ✓, $cd$(2) ✓, $ea$(3) ✓, $bc$(4) ✓ — joins $\{a,b,e\}$ with $\{c,d\}$; reject $de$(5) (both in same component — would close a cycle), reject $bd$(6). Done: 4 edges $=|V|-1$.
+- *Jarník–Prim from $a$*: cheapest leaving $\{a\}$ is $ab$(1); leaving $\{a,b\}$ is $ea$(3); then $bc$(4); then $cd$(2). Same tree, different discovery order.
+- *Borůvka round 1*: $a$→$ab$(1), $b$→$ab$, $c$→$cd$(2), $d$→$cd$, $e$→$ea$(3) ⇒ components $\{a,b,e\},\{c,d\}$. Round 2: both pick $bc$(4). Two rounds, consistent with $\le\lceil\log_2 5\rceil=3$.
 
 ### 2.2 ⭐⭐ Union-Find / disjoint sets *(problém Union-Find)* (*[2011pal02], [mst3]*)
 
@@ -112,10 +136,24 @@ Maintains a partition under `MakeSet`, **`Find(x)`** (return representative / *b
 
 ### 2.3 ⭐ Strongly Connected Components *(silně souvislé komponenty)* (*[2012pal03], [pal04]*)
 
-Digraph is **strongly connected** if every pair is mutually reachable; **SCC** = maximal such subgraph; $\mathrm{SCC}(v)=\{u\mid v\!\to\!u$ and $u\!\to\!v\}$.
+Digraph is **strongly connected** if every pair is mutually reachable; **SCC** = maximal such subgraph; $\mathrm{SCC}(v)=\{u\mid v\!\to\!u$ and $u\!\to\!v\}$. Mutual reachability is an **equivalence relation** (reflexive, symmetric, transitive) ⇒ SCCs **partition** $V$.
 
-- **Kosaraju–Sharir** — two passes: (1) DFS on $G$, pushing vertices onto a stack on **finish**; (2) DFS on the **transpose** $G^{\top}$, popping start vertices off the stack — each tree of the second forest is one SCC. **Two traversals**, $\Theta(\lvert V\rvert+\lvert E\rvert)$.
-- **Tarjan** — single DFS with `index` (discovery number) and `lowlink` (lowest index reachable through the subtree + one back/cross edge into the on-stack part) and a vertex stack. A vertex with `lowlink==index` is an **SCC root**; pop the stack down to it. **One traversal**, $\Theta(\lvert V\rvert+\lvert E\rvert)$ — faster in practice (no transpose).
+⭐ **Condensation** *(kondenzace)* — Mařík's 2022 question verbatim (`questions.md` Q2): contract each SCC to a single vertex; keep an arc $C_1\to C_2$ iff some arc goes from a vertex of $C_1$ to a vertex of $C_2$.
+
+- The condensation is **always a DAG**: a directed cycle through two condensation vertices would merge their SCCs into one — contradiction with maximality.
+- **SCCs of a DAG are exactly the single vertices** (any 2-vertex mutual reachability is a directed cycle), so a DAG equals its own condensation.
+- Consequence: every digraph = DAG of SCCs ⇒ processing order for many algorithms (e.g. 2-SAT, dataflow).
+
+**The two algorithms** (be ready to *demonstrate one and state the principle of the other*):
+
+- **Kosaraju–Sharir** — two passes: (1) DFS on $G$, pushing vertices onto a stack on **finish**; (2) DFS on the **transpose** $G^{\top}$ ($G$ with all arcs reversed), starting always from the highest unvisited vertex of the stack — each tree of the second forest is one SCC. **Two traversals**, $\Theta(\lvert V\rvert+\lvert E\rvert)$.
+  *Why it works:* the vertex with the **latest finish time** lies in a **source SCC** of the condensation. In $G^{\top}$ that SCC becomes a **sink**, so the DFS started there reaches exactly its own SCC and nothing more; induction peels off SCCs one by one in reverse topological order of the condensation. ($G$ and $G^{\top}$ have identical SCCs — reversing arcs preserves mutual reachability.)
+- **Tarjan** — single DFS with `index` (discovery number) and `lowlink` (lowest index reachable through the subtree + one back/cross edge into the on-stack part) and a vertex stack. A vertex with `lowlink==index` is an **SCC root**; pop the stack down to it. **One traversal**, $\Theta(\lvert V\rvert+\lvert E\rvert)$ — faster in practice (no transpose, one pass).
+  *Why it works:* `lowlink(v) == index(v)` means nothing in $v$'s subtree escapes to an earlier (still-open) vertex, so $v$'s subtree minus already-removed SCCs is exactly one SCC with root $v$. The stack holds vertices whose SCC is not yet closed.
+
+**⭐ Demo example.** $V=\{1..6\}$, arcs $1\to2,\ 2\to3,\ 3\to1$ (cycle), $3\to4,\ 4\to5,\ 5\to6,\ 6\to4$ (cycle). SCCs: $\{1,2,3\}$ and $\{4,5,6\}$; condensation: $C_1\to C_2$, a 2-vertex DAG.
+*Tarjan from 1:* indices $1..6$ in DFS order; back edge $3\to1$ sets `lowlink(3)=lowlink(2)=1`; descending into 4–5–6, back edge $6\to4$ gives `lowlink(6)=lowlink(5)=4`; vertex 4 closes with `lowlink=index=4` → pop $\{6,5,4\}$; vertex 1 closes with `lowlink=index=1` → pop $\{3,2,1\}$.
+*Kosaraju:* first DFS finishes 6,5,4 before 3,2,1 ⇒ stack top is 1; in $G^{\top}$ DFS from 1 reaches $\{1,3,2\}$ only (arc $3\to4$ is reversed); next unvisited stack top 4 yields $\{4,6,5\}$.
 
 ```
 find_scc(v):                          # Tarjan
@@ -157,6 +195,27 @@ Unlike general GI, **tree isomorphism is (near-)linear** via a **canonical certi
 - **Root at the center(s)** *(střed stromu)* — a tree has exactly **1 or 2 centers** (minimum-eccentricity vertices), found by repeatedly peeling leaves; rooting there makes the certificate canonical regardless of labelling.
 - **AHU bottom-up naming:** label every vertex `01`; repeatedly, for each non-leaf $x$, take the multiset of its leaf-children labels (plus $x$'s own label stripped of its outer `0…1`), **sort them lexicographically**, concatenate, wrap with a leading `0` and trailing `1`; remove those leaves. Sorting children's labels makes sibling order irrelevant ⇒ canonical. End with 1 vertex (its label = certificate) or 2 (concatenate the two labels in lex order).
 - Comparing two certificates is linear in their length; construction is near-linear (each vertex processed once; cost dominated by sorting children labels).
+
+### 2.7 ⭐ Shortest paths (Dijkstra, Bellman–Ford, Floyd–Warshall)
+
+> Formally a KO topic (full treatment → `../BE4M35KO_combinatorial_optimization/summary.md`), but the committee asks it under "polynomial algorithms for standard graph problems" — 3 archived questions (Mařík 2015, Demlová 2015, Kubr 2014). Minimum to deliver:
+
+**Problem.** Given weighted digraph and source $s$, find $d(v)=$ min total weight of an $s\to v$ path. Well-defined iff no **negative cycle** is reachable (otherwise paths can be shortened forever).
+
+**⭐ Bellman's principle of optimality** *(Bellmanova rovnice)* — the answer Mařík "pulled out" of a student: shortest paths are composed of shortest sub-paths; if $u$ lies on a shortest $s\to v$ path then its $s\to u$ prefix is a shortest path too. Hence the fixpoint equation $d(v)=\min_{(u,v)\in E}\big(d(u)+w(u,v)\big)$, $d(s)=0$, and the universal primitive **relaxation**: `if d[u]+w(u,v) < d[v]: d[v]=d[u]+w(u,v); p[v]=u`.
+
+| Algorithm | Requires | Complexity | Idea |
+|---|---|---|---|
+| **BFS** | unit weights | $\Theta(\lvert V\rvert{+}\lvert E\rvert)$ | layers = distance |
+| **DAG + topo order** | acyclic | $\Theta(\lvert V\rvert{+}\lvert E\rvert)$ | relax edges in topological order — each once |
+| **Dijkstra** | $w\ge0$ | $O(\lvert V\rvert^2)$ array; $O(\lvert E\rvert\log\lvert V\rvert)$ binary heap; $O(\lvert E\rvert{+}\lvert V\rvert\log\lvert V\rvert)$ Fib. heap | greedily close the OPEN vertex with smallest $d$; relax its out-edges |
+| **Bellman–Ford** | any $w$, no neg. cycle | $O(\lvert V\rvert\cdot\lvert E\rvert)$ | $\lvert V\rvert{-}1$ rounds of relaxing *all* edges; a $\lvert V\rvert$-th improving round ⇔ **negative cycle detected** |
+| **Floyd–Warshall** | any $w$, no neg. cycle | $\Theta(\lvert V\rvert^3)$, $\Theta(\lvert V\rvert^2)$ space | all-pairs DP |
+
+- **Why Dijkstra needs $w\ge0$:** its greedy proof assumes extending a path can never shorten it; a negative edge later could undercut an already-CLOSED vertex. Counterexample: $s\to a$ (1), $s\to b$ (2), $b\to a$ ($-2$) — Dijkstra closes $a$ with 1, true distance is 0.
+- **Dijkstra = Prim's loop with key $d[u]+w(u,v)$** (§2.1); same PQ-copies trick instead of decrease-key.
+- ⭐ **Demlová's follow-ups (2015):** topologically ordered DAG ⇒ shortest (and longest!) paths in **linear time** (one relaxation sweep — don't say "complexity doesn't change"). And: **longest path in a general graph is NP-hard** (Hamiltonian path reduces to it), so a polynomial algorithm for it would give P = NP; on DAGs it's linear (§1.5).
+- ⭐ **Floyd–Warshall invariant** (Demlová: "what does the matrix look like after 3 passes?"): after the $k$-th outer iteration, $D^{(k)}[i][j]$ = length of the shortest $i\to j$ path whose **intermediate vertices are only from $\{1,\dots,k\}$**. Recurrence $D^{(k)}[i][j]=\min\big(D^{(k-1)}[i][j],\ D^{(k-1)}[i][k]+D^{(k-1)}[k][j]\big)$; start $D^{(0)}=$ weight matrix ($\infty$ for non-edges, 0 diagonal). Works with negative edges; a negative diagonal entry appearing ⇔ negative cycle. Output = the **distance matrix** of §1.3.
 
 ---
 
@@ -261,7 +320,8 @@ Approximately balanced ($h_{RB}\le 2h_{\text{ideal}}$), one **color** bit/node, 
 - **Black-height** $bh(x)$ = #black nodes on a path from $x$ down to a leaf (excluding $x$). ⭐ **Height bound** $h\le 2\lg(n+1)$ (proof: subtree of $x$ has $\ge2^{bh(x)}-1$ internal nodes; $bh\ge h/2$).
 - **Insert:** new node red, BST-insert; fix the "two reds" violation by **recoloring** (uncle red) or **rotation** (uncle black, cases 2→3). **$\Theta(\log n)$, $\le2$ rotations.**
 - **Delete:** BST-delete; if a black node is removed, propagate a "double-black" up, fixed by sibling cases 1–4. **$\Theta(\log n)$, $\le3$ rotations.**
-- Equivalent to a **2-3-4 tree** (B-tree of degree 2–4).
+- ⭐ **RB ↔ 2-3-4 correspondence** (Lisý 2017 asked exactly this): an RB tree is a binary encoding of a **2-3-4 tree** (B-tree with 1–3 keys, 2–4 children). Merge every red node into its black parent: black node with 0/1/2 red children ↔ 2-node/3-node/4-node. Recoloring ↔ node split; the equal-black-height property ↔ "all B-tree leaves at the same depth".
+- ⭐ **AVL vs. RB height** (Píša 2015): AVL $h\le1.44\log_2 n$ is *more rigidly* balanced than RB $h\le2\log_2(n{+}1)$ ⇒ AVL searches are slightly faster, but AVL may rebalance more on updates (delete can cascade $O(\log n)$ rotation events; RB delete needs $\le3$ rotations). Rule of thumb: read-heavy → AVL, update-heavy → RB (hence RB in `std::map`, Java `TreeMap`, kernels).
 
 ### 4.4 ⭐ B-tree and B+ tree (*[paska11b], [2011pal03c]*)
 
@@ -271,7 +331,17 @@ Bayer–McCreight 1972 — "BST on disk": each node = one disk block; minimize *
 - **Search** $O(\log_m n)$ block reads; **height** $h\le\log_{\lceil m/2\rceil}\frac{n+1}2$.
 - **Insert:** *multiphase* — insert in leaf; on overflow split around the **median**, promote it upward (bottom-up). *Single-phase* — split every full node on the way down (top-down). Root split grows the tree by one level.
 - **Delete:** internal-node key swapped with leaf predecessor/successor; on underflow **borrow** from a richer sibling (rotation through parent) else **merge** node+separator+sibling and recurse up.
-- **B+ tree:** records only in **leaves** (internal nodes = routers); **leaves linked** in a list ⇒ fast sequential and ⭐ **range queries** $\Theta(b\log_b n + k/b)$ ($k$ = #results). Find/Insert/Delete $\Theta(b\log_b n)$.
+- **B+ tree:** records only in **leaves** (internal nodes = routers); **leaves linked** in a list ⇒ fast sequential and ⭐ **range queries** $\Theta(b\log_b n + k/b)$ ($k$ = #results). Find/Insert/Delete $\Theta(b\log_b n)$. **B vs. B+ differences** (Mařík 2022): B+ duplicates router keys (a key appears in a leaf *and* possibly inside), stores data only at one level, supports linked-leaf scans; B-tree stores each key exactly once with its record.
+- ⭐ **"Which structure for reading data from a hard disk?"** (Píša 2015) — **B/B+ tree**: node size = disk block, so height $\log_{\lceil m/2\rceil}n$ ≈ 3–4 block reads for millions of keys, vs. $\log_2 n\approx20$ random reads for a binary tree. Databases/filesystems (NTFS, ext4, indexes) use B+.
+
+**⭐ Worked B-tree insert (multiphase), Mařík 2022 format.** B-tree with max 2 keys/node ($m=3$, min 1 key). Insert 1, 2, 3, 4, 5, 6, 7:
+
+1. `[1]` → `[1 2]` → inserting 3 overflows `[1 2 3]` → **split around median 2**: root `[2]`, children `[1]`,`[3]`.
+2. Insert 4 → leaf `[3 4]`. Insert 5 → `[3 4 5]` overflows → split around 4, promote: root `[2 4]`, leaves `[1]`,`[3]`,`[5]`.
+3. Insert 6 → `[5 6]`. Insert 7 → `[5 6 7]` overflows → promote 6 into the root: `[2 4 6]` — but that **overflows the root too** → split the root around its median 4: new root `[4]`, children `[2]`,`[6]`, leaves `[1]`,`[3]`,`[5]`,`[7]`.
+4. This cascading root split is **the only way a B-tree gains height** — it grows at the root, never at the leaves; that is exactly why all leaves stay at equal depth.
+
+*Find:* within each node scan (or binary-search) the keys, descend between the bounding keys; $O(\log_m n)$ block reads.
 
 ### 4.5 ⭐ Splay tree (*[paska12b]*)
 
@@ -370,9 +440,21 @@ Heaps back Jarník–Prim/Dijkstra and combinatorial selection.
 | **Binomial heap** *(binomiální)* | $O(\log n)$ (amort. $O(1)$) | $O(\log n)$ | $O(\log n)$ | $O(\log n)$ |
 | **Fibonacci heap** *(Fibonacciho)* | $O(1)$ | $O(\log n)$ amort. | $O(1)$ amort. | $O(1)$ |
 
-- **Binary heap:** complete binary tree in an array; `bubble-up` on insert, `bubble-down` (heapify) on extract; `build-heap` in $O(n)$.
-- **Binomial heap:** forest of binomial trees $B_k$ ($2^k$ nodes, height $k$); merge = binary-addition-style linking of equal orders.
-- **Fibonacci heap:** lazy melding + cascading cuts; its $O(1)$ amortized decrease-key gives Prim/Dijkstra $O(\lvert E\rvert+\lvert V\rvert\log\lvert V\rvert)$.
+**⭐ Binary heap in detail** (Mařík & Čmolík asked the full package — definition, array representation, every operation):
+
+- **Definition:** a **complete binary tree** (all levels full except possibly the last, filled left-to-right) satisfying the **heap property**: each node's key $\le$ (min-heap) its children's keys. ⇒ minimum at the root; height $\lfloor\log_2 n\rfloor$.
+- ⭐ **Array representation** (Čmolík insisted on this over pointer objects, 2015): store nodes level by level. With 1-based indexing, node $i$ has children $2i,\ 2i{+}1$ and parent $\lfloor i/2\rfloor$ (0-based: $2i{+}1,2i{+}2$; $\lfloor(i{-}1)/2\rfloor$). No pointers, perfect cache behavior — completeness is what makes this work.
+- **Insert** $O(\log n)$: append at the end (keep completeness), **bubble-up** while smaller than parent.
+- **AccessMin** $O(1)$: root. **DeleteMin/ExtractMin** $O(\log n)$: move the last element to the root, shrink, **bubble-down** (swap with smaller child) while violating.
+- **Delete(arbitrary node)** $O(\log n)$: replace with last element; bubble up *or* down as needed (need the node's index — hence auxiliary position map if deleting by key).
+- **Build-heap** $O(n)$: bubble-down nodes $\lfloor n/2\rfloor..1$; cost $\sum_h \lceil n/2^{h+1}\rceil O(h)=O(n)$ (most nodes are near the leaves where bubble-down is cheap).
+- ⭐ **Merging two binary heaps** (Mařík + Navara follow-up, 2015): no efficient structural merge — either insert the $m$ elements of the smaller heap one by one, $O(m\log(n{+}m))$, or concatenate the arrays and rebuild with build-heap, $O(n{+}m)$. (Distinguish the two heap sizes — that was the point of Navara's question.) Heaps designed to merge fast: binomial/Fibonacci ($O(\log n)$ / $O(1)$).
+
+**⭐ Amortized complexity** *(amortizovaná složitost)* — definition demanded three times (2012×2, 2018): a bound on the **average cost per operation over any worst-case *sequence*** of operations: $\frac1m\sum_{i=1}^m c_i \le f(n)$ guaranteed for *every* sequence of $m$ ops (no probability involved — unlike *average-case*, which averages over random inputs). Analysis tools: aggregate method, accounting (prepaid credits), potential function $\Phi$ with $\hat c_i=c_i+\Phi_i-\Phi_{i-1}$.
+
+- **Binomial heap:** forest of **binomial trees** $B_k$ ($B_k$ = two $B_{k-1}$ linked; $2^k$ nodes, height $k$, root degree $k$), at most one tree per order — like binary digits of $n$. **Merge $O(\log n)$** = binary addition with carries (link equal-order trees). Insert = merge with a singleton ($O(\log n)$ worst, $O(1)$ amortized — same as binary counter increment); ExtractMin: find min among $O(\log n)$ roots, remove it, merge its children back.
+- **Fibonacci heap:** lazy: insert/merge just concatenate root lists in $O(1)$; all the work is deferred to **ExtractMin**, whose **consolidation** links equal-degree trees ($O(\log n)$ amortized). **Decrease-key $O(1)$ amortized** by cutting the node (plus **cascading cuts** — a node that loses a second child is cut too; this keeps tree sizes exponential in root degree, whence the Fibonacci numbers and the name).
+- ⭐ **When and why which** (Mařík's favorite follow-up, 2015/2016/2018): binomial when you need fast **merge**; Fibonacci when you do many **decrease-keys** — Prim/Dijkstra do $O(|E|)$ of them, giving $O(\lvert E\rvert+\lvert V\rvert\log\lvert V\rvert)$. Caveats he wanted to hear: Fibonacci bounds are **amortized** — a single ExtractMin can take long (consolidation), bad for **real-time systems**; constants are large, so binary heaps usually win in practice.
 
 ---
 
@@ -387,6 +469,8 @@ Heaps back Jarník–Prim/Dijkstra and combinatorial selection.
 | Disjoint sets | **Union-Find** (rank + path compression) | $O(m\,\alpha(n))$ |
 | SCC | **Kosaraju–Sharir** (2 DFS) / **Tarjan** (1 DFS) | $\Theta(\lvert V\rvert+\lvert E\rvert)$ |
 | Euler trail | **Hierholzer** | $\Theta(\lvert V\rvert+\lvert E\rvert)$ |
+| Shortest paths | **Dijkstra** ($w\ge0$; Fib. heap) | $O(\lvert E\rvert+\lvert V\rvert\log\lvert V\rvert)$ |
+| Shortest paths | **Bellman–Ford** (neg. edges) / **Floyd–Warshall** (all pairs) | $O(\lvert V\rvert\lvert E\rvert)$ / $\Theta(\lvert V\rvert^3)$ |
 | Tree isomorphism | **AHU certificate** | near-linear |
 | Graph isomorphism | open (NP-intermediate candidate) | quasi-poly (Babai) |
 | Subset/comb/perm rank | combinatorial / factorial number system | $O(n)$ / $O(n^2)$ |
